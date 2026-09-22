@@ -49,18 +49,57 @@ npm run preview
 
 ### Hosting it
 
-Everything in `dist/` is static, so any static host works. Serve it over HTTPS:
-`getUserMedia` refuses to run on plain HTTP, so the app cannot do anything
-useful without it.
+Everything in `dist/` is static, so any static host works. **Serve it over
+HTTPS.** `getUserMedia` refuses to run outside a secure context, so on plain
+HTTP the page loads but the microphone never starts and the app is useless.
 
 If the host serves from a subpath rather than a domain root, set a matching
 base path at build time:
 
 ```bash
-BASE_PATH=/UkeFriend/ npm run build
+BASE_PATH=/lele/ npm run build
 ```
 
-There is no deploy automation in this repo.
+### Private deployment behind a password (netcup, Apache)
+
+`scripts/build-lele.sh` produces `ukefriend-lele.zip`, ready to upload into a
+`lele` folder in your document root:
+
+```bash
+./scripts/build-lele.sh
+LELE_USER=me LELE_PASSWORD='...' ./scripts/build-lele.sh   # or pick your own
+```
+
+It builds with `DISABLE_PWA=1`, which drops the service worker, Workbox and the
+manifest. That is deliberate: a cached app shell would stay readable on the
+device after the password changed, and nothing should outlive the password on a
+private deployment. The cost is no offline use and no home-screen app.
+
+The zip carries `.htaccess` (Basic Auth, forced HTTPS, no directory listing,
+`noindex` headers, MIME types, cache rules), `robots.txt`, `.htpasswd` and
+`whereami.php`.
+
+**After uploading**, one manual step: `AuthUserFile` needs an absolute server
+path, which differs per host and cannot be guessed.
+
+1. Open `https://<your-domain>/lele/whereami.php` and copy the path it prints.
+2. Replace `__ABSOLUTE_PATH_TO_LELE__` in `.htaccess` with it.
+3. Delete `whereami.php`.
+
+To change the password later:
+
+```bash
+htpasswd -B .htpasswd lele
+```
+
+The forced-HTTPS rule checks both `%{HTTPS}` and `X-Forwarded-Proto`, because
+shared hosting usually terminates TLS at a proxy and leaves the first unset.
+
+This config was tested against a real Apache 2.4 with `AllowOverride All`:
+401 without credentials, 200 with them, 403 on `.htpasswd`, `.htaccess` and
+directory listings, and the full browser smoke test passing through the auth.
+What could not be tested here is netcup's own Apache configuration — in
+particular whether your plan permits these `.htaccess` directives.
 
 ## How chord detection works
 

@@ -1,0 +1,82 @@
+# UkeFriend — private deployment at https://<your-domain>/lele/
+#
+# Apache 2.4 syntax (netcup webhosting runs 2.4).
+#
+# BEFORE UPLOADING: replace __ABSOLUTE_PATH_TO_LELE__ below with the real
+# server path to this folder. Upload whereami.php alongside this file, open it
+# in a browser once, copy what it prints, then delete it. AuthUserFile will not
+# accept a relative path, and the path differs per host, so it cannot be
+# guessed.
+
+# ---------------------------------------------------------------------------
+# Password protection
+# ---------------------------------------------------------------------------
+AuthType Basic
+AuthName "UkeFriend"
+AuthUserFile __ABSOLUTE_PATH_TO_LELE__/.htpasswd
+Require valid-user
+
+# ---------------------------------------------------------------------------
+# Force HTTPS
+# ---------------------------------------------------------------------------
+# Not cosmetic. Two hard reasons:
+#   1. getUserMedia refuses to run outside a secure context, so over plain HTTP
+#      the page loads but the microphone never starts — the app is useless.
+#   2. Basic Auth sends the password base64-encoded on every single request.
+#
+# %{HTTPS} is frequently unset on shared hosting because TLS terminates at a
+# proxy upstream, so the forwarded header is checked as well.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Keep it off the public web
+# ---------------------------------------------------------------------------
+# No directory listing if an index file is ever missing.
+Options -Indexes
+
+# Never serve .htaccess or .htpasswd themselves.
+<FilesMatch "^\.ht">
+  Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+  # Belt and braces. A crawler cannot get past the password anyway, but this
+  # also covers anything that sees the URL in a referrer or a shared link.
+  Header always set X-Robots-Tag "noindex, nofollow, noarchive, nosnippet"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "no-referrer"
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# MIME types
+# ---------------------------------------------------------------------------
+# Apache's default mime.types does not reliably cover these, and a wrong type
+# on the module script stops the whole app from booting.
+<IfModule mod_mime.c>
+  AddType text/javascript .js .mjs
+  AddType text/css .css
+  AddType image/svg+xml .svg
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Caching
+# ---------------------------------------------------------------------------
+# Asset filenames carry a content hash, so they can be cached hard. index.html
+# must not be, or a re-upload would not show up until the browser expired it.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|mjs|css|woff2|png|svg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# Single page, no client-side router, so no rewrite-to-index rule is needed.
+DirectoryIndex index.html

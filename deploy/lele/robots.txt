@@ -1,0 +1,4 @@
+# Private deployment. Everything here sits behind a password, so a crawler
+# cannot read it regardless — this is belt and braces.
+User-agent: *
+Disallow: /

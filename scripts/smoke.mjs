@@ -21,9 +21,20 @@ const browser = await chromium.launch({
   ],
 });
 
+// Basic Auth for testing a password-protected deployment:
+//   SMOKE_AUTH=user:password npm run smoke -- ...
+const auth = process.env.SMOKE_AUTH;
+const [authUser, authPass] = auth ? auth.split(':') : [];
+
 const context = await browser.newContext({
   permissions: ['microphone'],
   viewport: { width: 1180, height: 900 },
+  ...(auth ? { httpCredentials: { username: authUser, password: authPass } } : {}),
+  // A TLS-terminating proxy sits in front of the real deployment; this makes
+  // the .htaccess HTTPS redirect behave as it would there.
+  ...(process.env.SMOKE_FORWARDED_HTTPS === '1'
+    ? { extraHTTPHeaders: { 'X-Forwarded-Proto': 'https' } }
+    : {}),
 });
 const page = await context.newPage();
 
