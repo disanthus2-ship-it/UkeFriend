@@ -49,13 +49,23 @@ npm run preview
 
 ### Deploying to GitHub Pages
 
-GitHub Pages serves from a subpath, so build with a matching base:
+`.github/workflows/deploy.yml` lints, typechecks, tests and builds on every push
+to `main`, then publishes `dist/` to Pages. It derives the base path from the
+repository name, so a rename or a fork keeps working without editing the file.
+
+**One-time setup:** Settings -> Pages -> Source -> *GitHub Actions*. Until that
+is set, the workflow runs but has nowhere to publish.
+
+The site then lives at `https://<owner>.github.io/<repo>/`. Pages serves HTTPS,
+which the microphone requires.
+
+To build for a subpath by hand:
 
 ```bash
 BASE_PATH=/UkeFriend/ npm run build
 ```
 
-Everything in `dist/` is static.
+Everything in `dist/` is static, so any static host works.
 
 ## How chord detection works
 
@@ -187,3 +197,8 @@ It needs Chromium; set `CHROME_PATH` if yours is not at the default location.
   played ukulele is genuinely hard.
 - iOS Safari needs a user gesture to start audio, hence the explicit
   "Enable microphone" button. AudioWorklet requires iOS 14.5+.
+- `npm audit` reports advisories in Vite, esbuild and Vitest. All of them
+  concern the local dev server and the Vitest UI, neither of which is used in
+  CI or shipped: the deployed artifact is static HTML, CSS and JS, and the
+  runtime dependencies (react, react-dom, zustand) are unaffected. Clearing
+  them needs a major Vite upgrade, so CI deliberately does not gate on audit.
