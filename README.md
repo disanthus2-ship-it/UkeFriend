@@ -47,25 +47,20 @@ npm run build        # production build
 npm run preview
 ```
 
-### Deploying to GitHub Pages
+### Hosting it
 
-`.github/workflows/deploy.yml` lints, typechecks, tests and builds on every push
-to `main`, then publishes `dist/` to Pages. It derives the base path from the
-repository name, so a rename or a fork keeps working without editing the file.
+Everything in `dist/` is static, so any static host works. Serve it over HTTPS:
+`getUserMedia` refuses to run on plain HTTP, so the app cannot do anything
+useful without it.
 
-**One-time setup:** Settings -> Pages -> Source -> *GitHub Actions*. Until that
-is set, the workflow runs but has nowhere to publish.
-
-The site then lives at `https://<owner>.github.io/<repo>/`. Pages serves HTTPS,
-which the microphone requires.
-
-To build for a subpath by hand:
+If the host serves from a subpath rather than a domain root, set a matching
+base path at build time:
 
 ```bash
 BASE_PATH=/UkeFriend/ npm run build
 ```
 
-Everything in `dist/` is static, so any static host works.
+There is no deploy automation in this repo.
 
 ## How chord detection works
 
